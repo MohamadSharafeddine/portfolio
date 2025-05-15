@@ -32,13 +32,13 @@ export default function Hero() {
         </p>
       </div>
 
-      <div className="relative z-20 min-w-[300px] min-h-[300px] max-w-[400px] max-h-[400px] md:min-w-[600px] md:min-h-[600px] md:max-w-[800px] md:max-h-[800px] mx-auto md:mr-20 self-end">
+      <div className="relative z-20 min-w-[400px] min-h-[400px] max-w-[800px] max-h-[800px] md:min-w-[600px] md:min-h-[600px] md:max-w-[800px] md:max-h-[800px] mx-auto md:mr-20 self-end">
         <Image
           src={personalImage}
           alt="Personal Image"
           fill
           quality={100}
-          sizes="(max-width: 768px) 400px, 800px"
+          sizes="(max-width: 768px) 800px, 800px"
           className="object-contain mix-blend-multiply"
           priority
         />
