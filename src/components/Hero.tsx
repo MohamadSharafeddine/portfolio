@@ -8,7 +8,7 @@ export default function Hero() {
   return (
     <div
       id="hero"
-      className="relative min-h-screen flex flex-col md:flex-row justify-between overflow-hidden"
+      className="relative min-h-[100svh] max-h-[100svh] flex flex-col md:flex-row justify-between overflow-hidden"
     >
       <div className="absolute inset-0 z-0">
         <Image
@@ -20,7 +20,7 @@ export default function Hero() {
         />
       </div>
 
-      <div className="w-full md:w-1/2 z-20 flex flex-col justify-center p-4 pt-24 md:p-8 md:pl-40 text-center md:text-left">
+      <div className="w-full md:w-1/2 z-20 flex flex-col justify-center min-h-[50vh] p-4 pt-20 md:p-8 md:pl-40 text-center md:text-left">
         <p className="text-xl md:text-2xl font-bold mb-4 md:mb-8 bg-gradient-to-r from-gray-700 via-gray-400 to-gray-200 md:bg-none text-transparent md:text-black bg-clip-text md:bg-clip-border">
           Hi, I am
         </p>
@@ -32,11 +32,12 @@ export default function Hero() {
         </p>
       </div>
 
-      <div className="relative z-20 w-[280px] h-[280px] md:w-[600px] md:h-[600px] mx-auto md:mr-20 self-end">
+      <div className="relative z-20 min-w-[250px] min-h-[250px] max-w-[280px] max-h-[280px] md:min-w-[500px] md:min-h-[500px] md:max-w-[600px] md:max-h-[600px] mx-auto md:mr-20 self-end">
         <Image
           src={personalImage}
           alt="Personal Image"
           fill
+          sizes="(max-width: 768px) 280px, 600px"
           className="object-contain mix-blend-multiply"
           priority
         />
