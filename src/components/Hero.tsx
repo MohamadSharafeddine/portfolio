@@ -8,7 +8,7 @@ export default function Hero() {
   return (
     <div
       id="hero"
-      className="relative min-h-screen flex md:flex-row flex-col justify-between overflow-hidden"
+      className="relative min-h-screen flex flex-col md:flex-row justify-between overflow-hidden"
     >
       <div className="absolute inset-0 z-0">
         <Image
@@ -20,7 +20,7 @@ export default function Hero() {
         />
       </div>
 
-      <div className="w-full md:w-1/2 flex flex-col justify-center p-4 md:p-8 md:pl-40 z-20 pt-24 md:pt-0 text-center md:text-left">
+      <div className="w-full md:w-1/2 z-20 flex flex-col justify-center p-4 pt-24 md:p-8 md:pl-40 text-center md:text-left">
         <p className="text-xl md:text-2xl font-bold mb-4 md:mb-8 bg-gradient-to-r from-gray-700 via-gray-400 to-gray-200 md:bg-none text-transparent md:text-black bg-clip-text md:bg-clip-border">
           Hi, I am
         </p>
@@ -32,7 +32,7 @@ export default function Hero() {
         </p>
       </div>
 
-      <div className="w-[280px] h-[280px] md:w-[600px] md:h-[600px] relative z-20 mx-auto md:mr-20 self-end">
+      <div className="relative z-20 w-[280px] h-[280px] md:w-[600px] md:h-[600px] mx-auto md:mr-20 self-end">
         <Image
           src={personalImage}
           alt="Personal Image"

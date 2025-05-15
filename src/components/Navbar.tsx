@@ -4,6 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 
+const navLinks = [
+  { href: "#about", text: "About Me" },
+  { href: "#skills", text: "Skills" },
+  { href: "#projects", text: "Projects" },
+  { href: "#contact", text: "Contact Me" },
+];
+
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -38,87 +45,49 @@ export default function Navbar() {
               className={`w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 ${
                 isMenuOpen ? "transform rotate-45 translate-y-2" : ""
               }`}
-            ></div>
+            />
             <div
               className={`w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 ${
                 isMenuOpen ? "opacity-0" : ""
               }`}
-            ></div>
+            />
             <div
               className={`w-6 h-0.5 bg-white transition-all duration-300 ${
                 isMenuOpen ? "transform -rotate-45 -translate-y-2" : ""
               }`}
-            ></div>
+            />
           </button>
 
           <div
             className={`md:hidden fixed inset-0 bg-black bg-opacity-90 transition-transform duration-300 ease-in-out ${
-              isMenuOpen
-                ? "transform translate-x-0"
-                : "transform translate-x-full"
+              isMenuOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >
             <div className="flex flex-col items-center justify-center h-full space-y-8">
-              <Link
-                href="#about"
-                onClick={scrollToSection}
-                className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
-              >
-                About Me
-              </Link>
-              <Link
-                href="#skills"
-                onClick={scrollToSection}
-                className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
-              >
-                Skills
-              </Link>
-              <Link
-                href="#projects"
-                onClick={scrollToSection}
-                className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
-              >
-                Projects
-              </Link>
-              <Link
-                href="#contact"
-                onClick={scrollToSection}
-                className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
-              >
-                Contact Me
-              </Link>
+              {navLinks.map(({ href, text }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={scrollToSection}
+                  className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
+                >
+                  {text}
+                </Link>
+              ))}
             </div>
           </div>
 
           <div className="hidden md:flex w-1/2 justify-between items-center px-16">
-            <Link
-              href="#about"
-              onClick={scrollToSection}
-              className="text-gray-100 hover:text-gray-50 hover:font-semibold"
-            >
-              About Me
-            </Link>
-            <Link
-              href="#skills"
-              onClick={scrollToSection}
-              className="text-gray-100 hover:text-gray-50 hover:font-semibold"
-            >
-              Skills
-            </Link>
-            <Link
-              href="#projects"
-              onClick={scrollToSection}
-              className="text-gray-100 hover:text-gray-50 hover:font-semibold"
-            >
-              Projects
-            </Link>
-            <Link
-              href="#contact"
-              onClick={scrollToSection}
-              className="text-gray-100 hover:text-gray-50 hover:font-semibold"
-            >
-              Contact Me
-            </Link>
+            {navLinks.map(({ href, text }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={scrollToSection}
+                className="text-gray-100 hover:text-gray-50 hover:font-semibold"
+              >
+                {text}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
