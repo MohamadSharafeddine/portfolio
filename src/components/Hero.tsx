@@ -20,7 +20,7 @@ export default function Hero() {
         />
       </div>
 
-      <div className="w-full md:w-1/2 z-20 flex flex-col justify-center p-4 pt-20 md:p-40 text-center md:text-left">
+      <div className="w-full md:w-1/2 min-h-[30svh] z-20 flex flex-col justify-center p-4 pt-20 md:p-40 text-center md:text-left">
         <p className="text-xl md:text-2xl font-bold mb-4 md:mb-8 bg-gradient-to-r from-gray-800 via-gray-400 to-gray-200 md:bg-none text-transparent md:text-gray-800 bg-clip-text md:bg-clip-border">
           Hi, I am
         </p>
