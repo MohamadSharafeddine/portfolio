@@ -6,7 +6,7 @@ import { HiMail } from "react-icons/hi";
 const Contact: FC = () => {
   return (
     <section id="contact" className="py-10 px-6">
-      <Title>Contact</Title>
+      <Title>Contact Me</Title>
       <div className="max-w-md mx-auto text-center">
         <p className="font-semibold">I&#39;d love to hear from you!</p>
         <p className="font-semibold mb-8">
