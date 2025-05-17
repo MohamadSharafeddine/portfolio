@@ -3,7 +3,7 @@ import Title from "./Title";
 
 const About: FC = () => {
   return (
-    <section id="about" className="py-16 px-6 ">
+    <section id="about" className="py-10 px-6 ">
       <Title>About Me</Title>
       <div className="max-w-3xl mx-auto text-center ">
         <p>

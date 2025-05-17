@@ -5,11 +5,12 @@ import { HiMail } from "react-icons/hi";
 
 const Contact: FC = () => {
   return (
-    <section id="contact" className="py-16 px-6">
+    <section id="contact" className="py-10 px-6">
       <Title>Contact</Title>
       <div className="max-w-md mx-auto text-center">
+        <p className="font-semibold">I&#39;d love to hear from you!</p>
         <p className="font-semibold mb-8">
-          Feel free to reach out through any of these platforms.
+          Feel free to connect with me on any of these platforms.
         </p>
         <div className="flex justify-center items-center gap-8">
           <a
