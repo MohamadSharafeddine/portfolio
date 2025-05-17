@@ -3,14 +3,23 @@ import Title from "./Title";
 
 const About: FC = () => {
   return (
-    <section id="about" className="py-10 px-6 ">
+    <section id="about" className="py-10 px-6">
       <Title>About Me</Title>
-      <div className="max-w-3xl mx-auto text-center ">
+      <div className="max-w-3xl mx-auto text-center space-y-6 text-base sm:text-lg">
         <p>
-          I&apos;m a passionate Full-Stack Developer with a background in
-          psychology, blending technical expertise with a deep understanding of
-          user behavior. I thrive on creating clean, scalable web and mobile
-          applications using modern tools like React, Next.js, and TypeScript.
+          I started out studying how people think, feel, and behave, and
+          somewhere along the way, I realized I wanted to build things that made
+          their lives a little easier, smoother, and more delightful. That path
+          led me from <b>Psychology</b> into software development, where
+          I&apos;ve found the perfect blend of logic, creativity, and human
+          insight.
+        </p>
+        <p>
+          I care about the little details, not just in code, but in how things
+          feel to use. I enjoy solving problems, learning how things work, and
+          turning ideas into thoughtful digital experiences. Whether it&apos;s
+          working solo or collaborating with a team, I try to bring curiosity,
+          empathy, and a healthy dose of obsession with doing things right.
         </p>
       </div>
     </section>
