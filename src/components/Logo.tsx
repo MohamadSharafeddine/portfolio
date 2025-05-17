@@ -1,9 +1,20 @@
 import Image from "next/image";
 
-export default function Logo() {
+interface LogoProps {
+  isFixed: boolean;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+export default function Logo({ isFixed, onClick }: LogoProps) {
   return (
-    <div className="flex items-center">
-      <Image src="/logo.png" alt="logo" width={48} height={48} priority />
+    <div className="flex items-center cursor-pointer" onClick={onClick}>
+      <Image
+        src={isFixed ? "/logo-inverted.png" : "/logo.png"}
+        alt="logo"
+        width={44}
+        height={44}
+        priority
+      />
     </div>
   );
 }

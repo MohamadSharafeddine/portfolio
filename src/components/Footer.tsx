@@ -3,6 +3,8 @@
 import { ChevronUpIcon } from "@heroicons/react/24/outline";
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   const scrollToTop = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -14,13 +16,13 @@ export default function Footer() {
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={scrollToTop}
-            className="flex flex-col items-center gap-2 px-4 py-2 hover:text-gray-50 hover:font-semibold cursor-pointer"
+            className="flex flex-col items-center gap-2 px-4 py-2 hover:text-gray-50 font-medium hover:font-semibold cursor-pointer"
             aria-label="Scroll to top"
           >
             <ChevronUpIcon className="h-5 w-5" />
             <span>BACK TO TOP</span>
           </button>
-          <p>&copy; 2024 Mohamad Sharafeddine. All rights reserved.</p>
+          <p>&copy; {currentYear} Mohamad Sharafeddine</p>
         </div>
       </div>
     </footer>

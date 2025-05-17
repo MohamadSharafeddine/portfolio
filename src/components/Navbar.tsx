@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 
@@ -13,6 +13,30 @@ const navLinks = [
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFixed, setIsFixed] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroSection = document.getElementById("hero");
+      if (heroSection) {
+        const heroHeight = heroSection.offsetHeight;
+        const scrollPosition = window.scrollY;
+
+        if (scrollPosition >= heroHeight && !isFixed) {
+          setIsFixed(true);
+        } else if (scrollPosition < heroHeight && isFixed) {
+          setIsFixed(false);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isFixed]);
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -26,14 +50,25 @@ export default function Navbar() {
     }
   };
 
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navClasses = `absolute top-0 left-0 right-0 z-50 py-4 transition-all duration-300 ${
+    isFixed ? "fixed bg-black shadow-md" : ""
+  }`;
+
+  const linkClasses = `text-gray-100 font-medium hover:text-gray-50 hover:font-semibold`;
+  const mobileLinkClasses = `text-gray-100 font-medium text-xl hover:text-gray-50 hover:font-semibold`;
+  const burgerBarClasses = `w-6 h-0.5 bg-white mb-1.5 transition-all duration-300`;
+
   return (
-    <nav className="absolute top-0 left-0 right-0 z-50 py-4">
+    <nav className={navClasses}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center">
-          <div className="w-1/2">
-            <Link href="/">
-              <Logo />
-            </Link>
+          <div className="w-1/2" onClick={scrollToTop}>
+            <Logo isFixed={isFixed} onClick={scrollToTop} />
           </div>
 
           <button
@@ -42,17 +77,15 @@ export default function Navbar() {
             aria-label="Toggle menu"
           >
             <div
-              className={`w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 ${
+              className={`${burgerBarClasses} ${
                 isMenuOpen ? "transform rotate-45 translate-y-2" : ""
               }`}
             />
             <div
-              className={`w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 ${
-                isMenuOpen ? "opacity-0" : ""
-              }`}
+              className={`${burgerBarClasses} ${isMenuOpen ? "opacity-0" : ""}`}
             />
             <div
-              className={`w-6 h-0.5 bg-white transition-all duration-300 ${
+              className={`${burgerBarClasses} ${
                 isMenuOpen ? "transform -rotate-45 -translate-y-2" : ""
               }`}
             />
@@ -69,7 +102,7 @@ export default function Navbar() {
                   key={href}
                   href={href}
                   onClick={scrollToSection}
-                  className="text-gray-100 text-xl hover:text-gray-50 hover:font-semibold"
+                  className={mobileLinkClasses}
                 >
                   {text}
                 </Link>
@@ -83,7 +116,7 @@ export default function Navbar() {
                 key={href}
                 href={href}
                 onClick={scrollToSection}
-                className="text-gray-100 hover:text-gray-50 hover:font-semibold"
+                className={linkClasses}
               >
                 {text}
               </Link>
