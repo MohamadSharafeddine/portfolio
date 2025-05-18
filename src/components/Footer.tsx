@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronUpIcon } from "@heroicons/react/24/outline";
+import Logo from "./Logo";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -16,13 +17,16 @@ export default function Footer() {
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={scrollToTop}
-            className="flex flex-col items-center gap-2 px-4 py-2 hover:text-gray-50 font-medium hover:font-semibold cursor-pointer"
+            className="flex flex-col items-center gap-2 px-4 py-2 hover:text-gray-50 font-medium hover:font-semibold cursor-pointer group"
             aria-label="Scroll to top"
           >
-            <ChevronUpIcon className="h-5 w-5" />
+            <ChevronUpIcon className="h-5 w-5 group-hover:-translate-y-1 transition-transform" />
             <span>BACK TO TOP</span>
           </button>
-          <p>&copy; {currentYear} Mohamad Sharafeddine</p>
+          <Logo isFixed={true} className="w-8 h-8" />
+          <p className="text-gray-400">
+            &copy; {currentYear} Mohamad Sharafeddine
+          </p>
         </div>
       </div>
     </footer>
