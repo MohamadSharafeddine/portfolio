@@ -92,7 +92,7 @@ export default function Navbar() {
           </button>
 
           <div
-            className={`md:hidden fixed inset-0 bg-black/90 transition-transform duration-300 ease-in-out ${
+            className={`md:hidden fixed inset-0 bg-black transition-transform duration-300 ease-in-out ${
               isMenuOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >
