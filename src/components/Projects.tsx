@@ -54,7 +54,7 @@ const Projects: FC = () => {
                   ))}
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-2">{title}</h3>
-                <p className="text-gray-200 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-gray-200 mb-4 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {description}
                 </p>
                 <a
