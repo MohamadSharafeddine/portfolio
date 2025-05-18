@@ -10,9 +10,8 @@ const About: FC = () => {
           I started out studying how people think, feel, and behave, and
           somewhere along the way, I realized I wanted to build things that made
           their lives a little easier, smoother, and more delightful. That path
-          led me <b>from Psychology into software development</b>, where
-          I&apos;ve found the perfect blend of logic, creativity, and human
-          insight.
+          led me <b>from psychology to software development</b>, where I&apos;ve
+          found the perfect blend of logic, creativity, and human insight.
         </p>
         <p>
           I care about the little details, not just in code, but in how things

@@ -72,7 +72,7 @@ export default function Navbar() {
           </div>
 
           <button
-            className="md:hidden z-50 p-2"
+            className="lg:hidden z-50 p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -92,7 +92,7 @@ export default function Navbar() {
           </button>
 
           <div
-            className={`md:hidden fixed inset-0 bg-black transition-transform duration-300 ease-in-out ${
+            className={`lg:hidden fixed inset-0 bg-black transition-transform duration-300 ease-in-out ${
               isMenuOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >
@@ -110,7 +110,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="hidden md:flex w-1/2 justify-between items-center px-16">
+          <div className="hidden lg:flex w-1/2 justify-between items-center px-16">
             {navLinks.map(({ href, text }) => (
               <Link
                 key={href}
