@@ -10,7 +10,7 @@ const Contact: FC = () => {
       <div className="max-w-md mx-auto text-center">
         <p className="font-semibold">I&#39;d love to hear from you!</p>
         <p className="font-semibold mb-8">
-          Feel free to connect with me on any of these platforms.
+          Feel free to reach out on any of these platforms.
         </p>
         <div className="flex justify-center items-center gap-8">
           <a

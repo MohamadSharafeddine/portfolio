@@ -75,7 +75,7 @@ const Skills: FC = () => {
                   className="p-4 flex flex-col items-center justify-center min-w-[120px]"
                 >
                   <div className="text-4xl">{icon}</div>
-                  <span className="mt-2 text-sm font-medium">{name}</span>
+                  <span className="mt-2 text-sm font-semibold">{name}</span>
                 </div>
               ))}
             </div>
