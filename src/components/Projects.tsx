@@ -12,10 +12,10 @@ const projects = [
     tags: ["React", "Laravel", "AI", "Education"],
   },
   {
-    title: "Red Flame Blue Flame",
+    title: "Red Flame & Blue Flame",
     description:
       "An Interactive web based game utilizing advanced HTML, CSS, and JavaScript techniques to deliver a compelling user experience.",
-    link: "https://github.com/MohamadSharafeddine/fireboy-watergirl-game",
+    link: "https://fireboy-watergirl-game.vercel.app/",
     image: "/projects/redflameblueflame.jpg",
     tags: ["JavaScript", "Game Dev", "Interactive"],
   },
