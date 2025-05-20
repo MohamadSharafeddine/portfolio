@@ -17,7 +17,7 @@ const projects = [
     title: "Red Flame & Blue Flame",
     description:
       "An Interactive web based game utilizing advanced HTML, CSS, and JavaScript techniques to deliver a compelling user experience.",
-    link: "https://fireboy-watergirl-game.vercel.app/",
+    link: "https://redflameblueflame.vercel.app/",
     image: "/projects/redflameblueflame.jpg",
     tags: ["JavaScript", "Game Dev", "Interactive"],
   },
