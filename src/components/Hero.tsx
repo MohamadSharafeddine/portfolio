@@ -25,7 +25,6 @@ export default function Hero() {
           priority
         />
       </motion.div>
-
       <motion.div
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -57,19 +56,18 @@ export default function Hero() {
           Full-Stack Web & Mobile Developer
         </motion.p>
       </motion.div>
-
       <motion.div
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.4 }}
-        className="relative z-20 min-w-[400px] min-h-[533px] max-w-[600px] max-h-[800px] lg:min-w-[450px] lg:min-h-[600px] lg:max-w-[600px] lg:max-h-[800px] mx-auto self-end"
+        className="relative z-20 w-full h-[60vh] lg:h-[90vh] max-w-[600px] mx-auto self-end"
       >
         <Image
           src={personalImage}
           alt="Personal Image"
           fill
           quality={100}
-          className="object-contain mix-blend-multiply"
+          className="object-contain object-bottom mix-blend-multiply"
           priority
         />
       </motion.div>
