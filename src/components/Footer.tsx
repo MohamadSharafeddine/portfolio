@@ -12,19 +12,20 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-black text-gray-100 py-8">
+    <footer className="py-8" style={{ backgroundColor: 'var(--footer-background)', color: 'var(--footer-text)' }}>
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={scrollToTop}
-            className="flex flex-col items-center gap-2 px-4 py-2 hover:text-gray-50 font-medium hover:font-semibold cursor-pointer group"
+            className="flex flex-col items-center gap-2 px-4 py-2 hover:opacity-70 font-medium hover:font-semibold cursor-pointer group transition-all duration-200"
+            style={{ color: 'var(--footer-text)' }}
             aria-label="Scroll to top"
           >
             <ChevronUpIcon className="h-5 w-5 group-hover:-translate-y-1 transition-transform" />
             <span>BACK TO TOP</span>
           </button>
           <Logo isFixed={true} className="w-8 h-8" />
-          <p className="text-gray-400">
+          <p style={{ color: 'var(--footer-text)', opacity: 0.7 }}>
             &copy; {currentYear} Mohamad Sharafeddine
           </p>
         </div>

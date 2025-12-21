@@ -25,7 +25,7 @@ const projects = [
 
 const Projects: FC = () => {
   return (
-    <section id="projects" className="py-10 px-6">
+    <section id="projects" className="py-10 px-6" style={{ backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
       <Title>Projects</Title>
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap gap-8 justify-center">
@@ -35,10 +35,10 @@ const Projects: FC = () => {
         </div>
 
         <div className="mt-16 text-center">
-          <h3 className="text-2xl font-bold mb-4 text-gray-800">
+          <h3 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
             More Projects Coming Soon
           </h3>
-          <p className="text-gray-500">Stay tuned for future updates!</p>
+          <p style={{ color: 'var(--text-muted)' }}>Stay tuned for future updates!</p>
         </div>
       </div>
     </section>

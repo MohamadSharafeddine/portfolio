@@ -3,7 +3,7 @@ import Title from "./Title";
 
 const About: FC = () => {
   return (
-    <section id="about" className="py-10 px-6">
+    <section id="about" className="py-10 px-6" style={{ backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
       <Title>About Me</Title>
       <div className="max-w-3xl mx-auto text-center space-y-6 text-base sm:text-lg">
         <p>

@@ -3,6 +3,35 @@
 :root {
   --background: #d7d7d7;
   --foreground: #000000;
+  --text-primary: #000000;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --card-background: #ffffff;
+  --navbar-background: rgba(0, 0, 0, 0.8);
+  --navbar-text: #ffffff;
+  --footer-background: #000000;
+  --footer-text: #f3f4f6;
+  --gradient-start: #1f2937;
+  --gradient-middle: #9ca3af;
+  --gradient-end: #e5e7eb;
+}
+
+[data-theme="dark"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --border-color: #374151;
+  --card-background: #111111;
+  --navbar-background: rgba(0, 0, 0, 0.9);
+  --navbar-text: #ffffff;
+  --footer-background: #000000;
+  --footer-text: #f3f4f6;
+  --gradient-start: #f3f4f6;
+  --gradient-middle: #9ca3af;
+  --gradient-end: #1f2937;
 }
 
 body {
@@ -12,4 +41,5 @@ body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

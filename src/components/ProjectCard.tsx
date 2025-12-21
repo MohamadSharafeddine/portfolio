@@ -12,7 +12,7 @@ interface ProjectCardProps {
 
 export default function ProjectCard({ title, description, link, image, tags }: ProjectCardProps) {
   return (
-    <div className="group relative overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-300 w-full sm:w-[calc(100%-2rem)] md:w-[calc(50%-2rem)] flex-grow basis-80">
+    <div className="group relative overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 w-full sm:w-[calc(100%-2rem)] md:w-[calc(50%-2rem)] flex-grow basis-80" style={{ backgroundColor: 'var(--card-background)' }}>
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/50 to-black/80 z-10" />
       <div className="relative h-[300px] w-full">
         <Image
