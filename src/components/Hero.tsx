@@ -19,35 +19,38 @@ const ChromeLogo = dynamic(() => import("./three/ChromeLogo"), { ssr: false });
 // Desktop: a large monogram whose letters flank the head and shoulders. Phones: smaller, so it stays on screen.
 const FIGURE_DESKTOP: Framing = { x: 0.5, y: 0.42, fill: 0.78, maxW: 0.95 };
 const FIGURE_PHONE: Framing = { x: 0.5, y: 0.37, fill: 0.5, maxW: 0.9 };
+// Tailwind's lg breakpoint, where the figure moves to the right column
+const DESKTOP_MEDIA = "(min-width: 1024px)";
+// Roughly when the intro timeline below has finished
+const INTRO_MS = 1700;
 
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
   const hud = useRef<BuildHud>({ step: null, percent: null, bar: null, status: null });
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [show3D, setShow3D] = useState(false);
 
-  // Matches Tailwind's lg breakpoint, where the figure moves to the right column
+  // Setting up the WebGL scene costs a few hundred ms of main thread on phones. Doing it during
+  // the intro froze the animation mid-way, so the logo loads after the intro, when the browser is idle.
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    let idle = 0;
+    const timer = window.setTimeout(() => {
+      if ("requestIdleCallback" in window) idle = window.requestIdleCallback(() => setShow3D(true), { timeout: 1200 });
+      else setShow3D(true);
+    }, INTRO_MS);
+    return () => {
+      window.clearTimeout(timer);
+      if (idle) window.cancelIdleCallback(idle);
+    };
   }, []);
-  const framing = isDesktop ? FIGURE_DESKTOP : FIGURE_PHONE;
 
-  useGSAP(
+  const { contextSafe } = useGSAP(
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.set("[data-hero-item='name']", { autoAlpha: 1 });
         const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
-        tl.fromTo("[data-hero-item='stage']", { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.4 }, 0)
-          .fromTo(
-            "[data-hero-item='portrait']",
-            { autoAlpha: 0, y: 40, filter: "brightness(0.2)" },
-            { autoAlpha: 1, y: 0, filter: "brightness(1)", duration: 1.6 },
-            0.1
-          )
+        // Opacity and transform only: animating a filter repaints the whole portrait every frame on phones
+        tl.fromTo("[data-hero-item='portrait']", { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: 1.6 }, 0.1)
           .fromTo("[data-hero-line]", { yPercent: 110 }, { yPercent: 0, duration: 1.1, stagger: 0.1 }, 0.25)
           .fromTo(
             "[data-hero-item='text']",
@@ -65,6 +68,13 @@ export default function Hero() {
     },
     { scope: root }
   );
+
+  // The monogram and its readout fade in once the first frame is actually on the canvas
+  const onLogoReady = contextSafe(() => {
+    const targets = "[data-hero-item='stage'], [data-hero-item='hud']";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) gsap.set(targets, { autoAlpha: 1 });
+    else gsap.fromTo(targets, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: "power2.out" });
+  });
 
   return (
     <section
@@ -93,7 +103,9 @@ export default function Hero() {
         className="pointer-events-none absolute top-16 left-1/2 aspect-[4/3] h-[min(48svh,440px)] -translate-x-1/2 lg:top-auto lg:bottom-0 lg:left-[calc(50%+min(1320px,100vw)/4)] lg:h-[min(92svh,1000px)]"
       >
         <div data-hero-item="stage" className="absolute inset-0">
-          <ChromeLogo hud={hud} wide={framing} tall={framing} />
+          {show3D && (
+            <ChromeLogo hud={hud} wide={FIGURE_DESKTOP} tall={FIGURE_PHONE} media={DESKTOP_MEDIA} onReady={onLogoReady} />
+          )}
         </div>
         <div
           data-hero-item="portrait"
@@ -115,7 +127,7 @@ export default function Hero() {
 
         {/* Generation readout (desktop) */}
         <div
-          data-hero-item="text"
+          data-hero-item="hud"
           className="absolute bottom-10 left-[2%] z-10 hidden w-[200px] font-mono text-[11px] text-fg-3 lg:block"
         >
           <div className="flex items-center justify-between">

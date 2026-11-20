@@ -15,7 +15,7 @@ const CHROME = new THREE.Color("#e9ebef");
 const GLOW = new THREE.Color("#f3f6ff");
 const STEEL = new THREE.Color("#b9bdc6");
 
-function buildLogoGeometry() {
+function buildLogoGeometry(light: boolean) {
   const svg = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${LOGO_PATH}"/></svg>`);
   const shapes = svg.paths.flatMap((p) => p.toShapes());
   const geo = new THREE.ExtrudeGeometry(shapes, {
@@ -23,8 +23,9 @@ function buildLogoGeometry() {
     bevelEnabled: true,
     bevelThickness: 6,
     bevelSize: 5,
-    bevelSegments: 5,
-    curveSegments: 18,
+    // Phones get fewer segments: invisible at that size, and much cheaper to build and outline
+    bevelSegments: light ? 3 : 5,
+    curveSegments: light ? 10 : 18,
   });
   // SVG space is y-down. Flip y and z together: that is a rotation, so face winding stays correct
   // (flipping only y turns the mesh inside out). Scale 500 units to ~3.2 and stand it on y = 0.
@@ -55,10 +56,14 @@ export interface Framing {
 
 interface ChromeLogoProps {
   hud: React.RefObject<BuildHud>;
-  /** Framing for landscape frames */
+  /** Framing used when `media` matches (or, without `media`, for landscape frames) */
   wide: Framing;
-  /** Framing for portrait (phone) frames */
+  /** Framing used otherwise */
   tall: Framing;
+  /** Media query that picks `wide`; switching is handled on resize, without rebuilding the scene */
+  media?: string;
+  /** Called once shaders are compiled and the first frame is on the canvas */
+  onReady?: () => void;
 }
 
 /**
@@ -66,252 +71,308 @@ interface ChromeLogoProps {
  * Two world-space clipping planes split it at the current step: chrome below, a glowing
  * cross-section at the cut (back faces), and a wireframe ghost of what is still to come.
  */
-export default function ChromeLogo({ hud, wide, tall }: ChromeLogoProps) {
+export default function ChromeLogo({ hud, wide, tall, media, onReady }: ChromeLogoProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let disposed = false;
+    let teardown: (() => void) | null = null;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.localClippingEnabled = true;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    Object.assign(renderer.domElement.style, { display: "block", width: "100%", height: "100%" });
-    mount.appendChild(renderer.domElement);
+    // Setup is split into phases with a yield between each, so it runs as several short tasks
+    // instead of one long freeze: scrolling and taps stay responsive while the logo prepares.
+    // Wait for a paint, then a fresh task: the browser renders a frame between every phase
+    const nextTask = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
-    const scene = new THREE.Scene();
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.02).texture;
-    scene.environment = envTex;
-    scene.environmentIntensity = 1.1;
+    const setup = async () => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const isPhone = window.matchMedia("(max-width: 767px)").matches;
 
-    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+      renderer.localClippingEnabled = true;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      Object.assign(renderer.domElement.style, { display: "block", width: "100%", height: "100%" });
+      mount.appendChild(renderer.domElement);
+      const abort = () => {
+        renderer.dispose();
+        renderer.domElement.remove();
+      };
 
-    // ---- Logo -----------------------------------------------------------------
-    const geo = buildLogoGeometry();
-    const size = new THREE.Vector3();
-    geo.boundingBox!.getSize(size);
-    const height = size.y;
-    const part = new THREE.Group();
-    scene.add(part);
+      await nextTask();
+      if (disposed) return abort();
 
-    const clipBelow = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0); // keeps y <= h
-    const clipAbove = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // keeps y >= h
+      const scene = new THREE.Scene();
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      // The reflection map is the most expensive step; half resolution is invisible on a phone-sized logo
+      const envTex = pmrem.fromScene(new RoomEnvironment(), 0.02, 0.1, 100, { size: isPhone ? 128 : 256 }).texture;
+      scene.environment = envTex;
+      scene.environmentIntensity = 1.1;
 
-    const chrome = new THREE.MeshPhysicalMaterial({
-      color: CHROME,
-      metalness: 1,
-      roughness: 0.14,
-      clearcoat: 1,
-      clearcoatRoughness: 0.06,
-      clippingPlanes: [clipBelow],
-    });
-    // Fine machined grooves, one per generated slice, in world space
-    chrome.onBeforeCompile = (shader) => {
-      shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nvarying float vSliceY;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSliceY = (modelMatrix * vec4(transformed, 1.0)).y;");
-      shader.fragmentShader = shader.fragmentShader
-        .replace("#include <common>", "#include <common>\nvarying float vSliceY;")
-        .replace(
-          "#include <color_fragment>",
-          "#include <color_fragment>\nfloat g = abs(fract(vSliceY * 52.0) - 0.5) * 2.0;\ndiffuseColor.rgb *= 0.9 + 0.1 * smoothstep(0.0, 0.3, g);"
-        );
-    };
-    part.add(new THREE.Mesh(geo, chrome));
+      const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
 
-    // Back faces only show where the cut opens the solid: a bright cross-section
-    part.add(
-      new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: GLOW, side: THREE.BackSide, clippingPlanes: [clipBelow] }))
-    );
+      await nextTask();
+      if (disposed) return abort();
 
-    // Still to generate: wireframe ghost plus a whisper of surface
-    part.add(
-      new THREE.LineSegments(
-        new THREE.EdgesGeometry(geo, 30),
-        new THREE.LineBasicMaterial({ color: STEEL, transparent: true, opacity: 0.42, clippingPlanes: [clipAbove] })
-      )
-    );
-    part.add(
-      new THREE.Mesh(
-        geo,
-        new THREE.MeshBasicMaterial({
-          color: STEEL,
-          transparent: true,
-          opacity: 0.035,
-          depthWrite: false,
-          clippingPlanes: [clipAbove],
-        })
-      )
-    );
+      // ---- Logo -----------------------------------------------------------------
+      const geo = buildLogoGeometry(isPhone);
+      const size = new THREE.Vector3();
+      geo.boundingBox!.getSize(size);
+      const height = size.y;
+      const part = new THREE.Group();
+      scene.add(part);
 
-    // ---- Scan plane at the current step -----------------------------------------
-    const planeW = size.x + 0.5;
-    const planeD = size.z + 1.2;
-    const sheet = new THREE.Mesh(
-      new THREE.PlaneGeometry(planeW, planeD),
-      new THREE.MeshBasicMaterial({
-        color: GLOW,
-        transparent: true,
-        opacity: 0.05,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      })
-    );
-    sheet.rotation.x = -Math.PI / 2;
-    scene.add(sheet);
-    const sheetFrame = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.PlaneGeometry(planeW, planeD)),
-      new THREE.LineBasicMaterial({ color: GLOW, transparent: true, opacity: 0.35 })
-    );
-    sheetFrame.rotation.x = -Math.PI / 2;
-    scene.add(sheetFrame);
-    const scanLight = new THREE.PointLight(GLOW, 5, 4, 1.6);
-    scene.add(scanLight);
+      const clipBelow = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0); // keeps y <= h
+      const clipAbove = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // keeps y >= h
 
-    // ---- Lights ---------------------------------------------------------------------
-    const key = new THREE.DirectionalLight("#ffffff", 2.2);
-    key.position.set(3, 5, 4);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight("#cfd8ff", 3);
-    rim.position.set(-4, 3, -4);
-    scene.add(rim);
-
-    // ---- Framing ----------------------------------------------------------------------
-    let running = false;
-    const resize = () => {
-      const w = mount.clientWidth;
-      const h = mount.clientHeight;
-      if (!w || !h) return;
-      // Retina is capped at 1.5x and the drawing buffer at ~2.4 MP: chrome edges stay crisp,
-      // and big screens don't pay for pixels nobody can see
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5, Math.sqrt(2.4e6 / (w * h))));
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      const f = camera.aspect >= 1 ? wide : tall;
-      const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-      const dist = Math.max(height / f.fill / (2 * halfTan), size.x / f.maxW / (2 * halfTan * camera.aspect), 4);
-      const viewH = 2 * halfTan * dist;
-      const viewW = viewH * camera.aspect;
-      // Pan the camera so the logo's center lands at (f.x, f.y) of the frame
-      const panX = (0.5 - f.x) * viewW;
-      const panY = (f.y - 0.5) * viewH;
-      const cy = height / 2;
-      camera.position.set(panX, cy + panY + dist * 0.08, dist);
-      camera.lookAt(panX, cy + panY, 0);
-      camera.updateProjectionMatrix();
-      if (!running) renderer.render(scene, camera);
-    };
-    const ro = new ResizeObserver(resize);
-    ro.observe(mount);
-
-    // ---- Interaction ------------------------------------------------------------------
-    const pointer = { x: 0, y: 0 };
-    const look = { x: 0, y: 0 };
-    const onPointer = (e: PointerEvent) => {
-      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
-      pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
-    };
-    window.addEventListener("pointermove", onPointer, { passive: true });
-
-    // ---- Build loop ---------------------------------------------------------------------
-    let lastStep = -1;
-    let lastStatus = "";
-    const setProgress = (p: number, status: string) => {
-      const step = Math.max(0, Math.min(TOTAL_STEPS, Math.round(p * TOTAL_STEPS)));
-      // quantize so the build visibly steps slice by slice
-      const h = (Math.ceil(p * 96) / 96) * (height + 0.02);
-      clipBelow.constant = h;
-      clipAbove.constant = -h;
-      sheet.position.y = sheetFrame.position.y = h;
-      scanLight.position.set(0, h + 0.15, 0.9);
-      const scanning = p > 0.001 && p < 0.999;
-      sheet.visible = sheetFrame.visible = scanning;
-      scanLight.intensity = scanning ? 5 : 0;
-
-      const els = hud.current;
-      if (els && (step !== lastStep || status !== lastStatus)) {
-        if (els.step) els.step.textContent = String(step).padStart(3, "0");
-        if (els.percent) els.percent.textContent = `${Math.round(p * 100)}%`;
-        if (els.bar) els.bar.style.transform = `scaleX(${p})`;
-        if (els.status) els.status.textContent = status;
-        lastStep = step;
-        lastStatus = status;
-      }
-    };
-
-    let lastTime = 0;
-    const cycle = BUILD_SECONDS + HOLD_SECONDS + RESET_SECONDS;
-    let raf = 0;
-    let elapsed = 0;
-
-    const frame = () => {
-      const now = performance.now();
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
-      lastTime = now;
-      elapsed += dt;
-      const t = elapsed % cycle;
-      if (t < BUILD_SECONDS) setProgress(t / BUILD_SECONDS, "Generating");
-      else if (t < BUILD_SECONDS + HOLD_SECONDS) setProgress(1, "Complete");
-      else {
-        const k = (t - BUILD_SECONDS - HOLD_SECONDS) / RESET_SECONDS;
-        setProgress(1 - k * k * (3 - 2 * k), "New seed");
-      }
-
-      look.x += (pointer.x - look.x) * 0.05;
-      look.y += (pointer.y - look.y) * 0.05;
-      part.rotation.y = Math.sin(elapsed * 0.3) * 0.5 + look.x * 0.4;
-      part.rotation.x = look.y * 0.05;
-
-      renderer.render(scene, camera);
-      raf = requestAnimationFrame(frame);
-    };
-
-    const start = () => {
-      if (running || reduceMotion) return;
-      running = true;
-      lastTime = performance.now();
-      raf = requestAnimationFrame(frame);
-    };
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(raf);
-    };
-
-    if (reduceMotion) {
-      setProgress(1, "Complete");
-      part.rotation.y = -0.35;
-    }
-
-    // Only render while on screen and the tab is visible
-    const io = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()));
-    io.observe(mount);
-    const onVisibility = () => (document.hidden ? stop() : start());
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      stop();
-      io.disconnect();
-      ro.disconnect();
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pointermove", onPointer);
-      scene.traverse((obj) => {
-        const o = obj as THREE.Mesh;
-        o.geometry?.dispose();
-        const m = o.material as THREE.Material | THREE.Material[] | undefined;
-        if (Array.isArray(m)) m.forEach((x) => x.dispose());
-        else m?.dispose();
+      const chrome = new THREE.MeshPhysicalMaterial({
+        color: CHROME,
+        metalness: 1,
+        roughness: 0.14,
+        clearcoat: 1,
+        clearcoatRoughness: 0.06,
+        clippingPlanes: [clipBelow],
       });
-      envTex.dispose();
-      pmrem.dispose();
-      renderer.dispose();
-      mount.removeChild(renderer.domElement);
+      // Fine machined grooves, one per generated slice, in world space
+      chrome.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>", "#include <common>\nvarying float vSliceY;")
+          .replace(
+            "#include <begin_vertex>",
+            "#include <begin_vertex>\nvSliceY = (modelMatrix * vec4(transformed, 1.0)).y;",
+          );
+        shader.fragmentShader = shader.fragmentShader
+          .replace("#include <common>", "#include <common>\nvarying float vSliceY;")
+          .replace(
+            "#include <color_fragment>",
+            "#include <color_fragment>\nfloat g = abs(fract(vSliceY * 52.0) - 0.5) * 2.0;\ndiffuseColor.rgb *= 0.9 + 0.1 * smoothstep(0.0, 0.3, g);",
+          );
+      };
+      part.add(new THREE.Mesh(geo, chrome));
+
+      // Back faces only show where the cut opens the solid: a bright cross-section
+      part.add(
+        new THREE.Mesh(
+          geo,
+          new THREE.MeshBasicMaterial({ color: GLOW, side: THREE.BackSide, clippingPlanes: [clipBelow] }),
+        ),
+      );
+
+      // Still to generate: wireframe ghost plus a whisper of surface
+      part.add(
+        new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo, 30),
+          new THREE.LineBasicMaterial({ color: STEEL, transparent: true, opacity: 0.42, clippingPlanes: [clipAbove] }),
+        ),
+      );
+      part.add(
+        new THREE.Mesh(
+          geo,
+          new THREE.MeshBasicMaterial({
+            color: STEEL,
+            transparent: true,
+            opacity: 0.035,
+            depthWrite: false,
+            clippingPlanes: [clipAbove],
+          }),
+        ),
+      );
+
+      await nextTask();
+      if (disposed) return abort();
+
+      // ---- Scan plane at the current step -----------------------------------------
+      const planeW = size.x + 0.5;
+      const planeD = size.z + 1.2;
+      const sheet = new THREE.Mesh(
+        new THREE.PlaneGeometry(planeW, planeD),
+        new THREE.MeshBasicMaterial({
+          color: GLOW,
+          transparent: true,
+          opacity: 0.05,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      sheet.rotation.x = -Math.PI / 2;
+      scene.add(sheet);
+      const sheetFrame = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(planeW, planeD)),
+        new THREE.LineBasicMaterial({ color: GLOW, transparent: true, opacity: 0.35 }),
+      );
+      sheetFrame.rotation.x = -Math.PI / 2;
+      scene.add(sheetFrame);
+      const scanLight = new THREE.PointLight(GLOW, 5, 4, 1.6);
+      scene.add(scanLight);
+
+      // ---- Lights ---------------------------------------------------------------------
+      const key = new THREE.DirectionalLight("#ffffff", 2.2);
+      key.position.set(3, 5, 4);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight("#cfd8ff", 3);
+      rim.position.set(-4, 3, -4);
+      scene.add(rim);
+
+      // ---- Framing ----------------------------------------------------------------------
+      let running = false;
+      let ready = false;
+      const mq = media ? window.matchMedia(media) : null;
+      const resize = () => {
+        const w = mount.clientWidth;
+        const h = mount.clientHeight;
+        if (!w || !h) return;
+        // Retina is capped at 1.5x and the drawing buffer at ~2.4 MP: chrome edges stay crisp,
+        // and big screens don't pay for pixels nobody can see
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5, Math.sqrt(2.4e6 / (w * h))));
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        const f = mq ? (mq.matches ? wide : tall) : camera.aspect >= 1 ? wide : tall;
+        const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        const dist = Math.max(height / f.fill / (2 * halfTan), size.x / f.maxW / (2 * halfTan * camera.aspect), 4);
+        const viewH = 2 * halfTan * dist;
+        const viewW = viewH * camera.aspect;
+        // Pan the camera so the logo's center lands at (f.x, f.y) of the frame
+        const panX = (0.5 - f.x) * viewW;
+        const panY = (f.y - 0.5) * viewH;
+        const cy = height / 2;
+        camera.position.set(panX, cy + panY + dist * 0.08, dist);
+        camera.lookAt(panX, cy + panY, 0);
+        camera.updateProjectionMatrix();
+        // Before shaders are compiled, a render would compile them synchronously and block the page
+        if (!running && ready) renderer.render(scene, camera);
+      };
+      const ro = new ResizeObserver(resize);
+      ro.observe(mount);
+      mq?.addEventListener("change", resize);
+
+      // ---- Interaction ------------------------------------------------------------------
+      const pointer = { x: 0, y: 0 };
+      const look = { x: 0, y: 0 };
+      const onPointer = (e: PointerEvent) => {
+        pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
+      };
+      window.addEventListener("pointermove", onPointer, { passive: true });
+
+      // ---- Build loop ---------------------------------------------------------------------
+      let lastStep = -1;
+      let lastStatus = "";
+      const setProgress = (p: number, status: string) => {
+        const step = Math.max(0, Math.min(TOTAL_STEPS, Math.round(p * TOTAL_STEPS)));
+        // quantize so the build visibly steps slice by slice
+        const h = (Math.ceil(p * 96) / 96) * (height + 0.02);
+        clipBelow.constant = h;
+        clipAbove.constant = -h;
+        sheet.position.y = sheetFrame.position.y = h;
+        scanLight.position.set(0, h + 0.15, 0.9);
+        const scanning = p > 0.001 && p < 0.999;
+        sheet.visible = sheetFrame.visible = scanning;
+        scanLight.intensity = scanning ? 5 : 0;
+
+        const els = hud.current;
+        if (els && (step !== lastStep || status !== lastStatus)) {
+          if (els.step) els.step.textContent = String(step).padStart(3, "0");
+          if (els.percent) els.percent.textContent = `${Math.round(p * 100)}%`;
+          if (els.bar) els.bar.style.transform = `scaleX(${p})`;
+          if (els.status) els.status.textContent = status;
+          lastStep = step;
+          lastStatus = status;
+        }
+      };
+
+      let lastTime = 0;
+      const cycle = BUILD_SECONDS + HOLD_SECONDS + RESET_SECONDS;
+      let raf = 0;
+      let elapsed = 0;
+
+      const frame = () => {
+        const now = performance.now();
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+        elapsed += dt;
+        const t = elapsed % cycle;
+        if (t < BUILD_SECONDS) setProgress(t / BUILD_SECONDS, "Generating");
+        else if (t < BUILD_SECONDS + HOLD_SECONDS) setProgress(1, "Complete");
+        else {
+          const k = (t - BUILD_SECONDS - HOLD_SECONDS) / RESET_SECONDS;
+          setProgress(1 - k * k * (3 - 2 * k), "New seed");
+        }
+
+        look.x += (pointer.x - look.x) * 0.05;
+        look.y += (pointer.y - look.y) * 0.05;
+        part.rotation.y = Math.sin(elapsed * 0.3) * 0.5 + look.x * 0.4;
+        part.rotation.x = look.y * 0.05;
+
+        renderer.render(scene, camera);
+        raf = requestAnimationFrame(frame);
+      };
+
+      const start = () => {
+        if (running || reduceMotion) return;
+        running = true;
+        lastTime = performance.now();
+        raf = requestAnimationFrame(frame);
+      };
+      const stop = () => {
+        running = false;
+        cancelAnimationFrame(raf);
+      };
+
+      if (reduceMotion) {
+        setProgress(1, "Complete");
+        part.rotation.y = -0.35;
+      }
+
+      // Compile shaders off the main thread where supported (KHR_parallel_shader_compile), then show
+      // the first frame. Rendering only runs while on screen and the tab is visible.
+      const io = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()));
+      const onVisibility = () => (document.hidden ? stop() : start());
+      resize();
+      renderer
+        .compileAsync(scene, camera)
+        .catch(() => {})
+        .then(() => {
+          if (disposed) return;
+          ready = true;
+          renderer.render(scene, camera);
+          onReadyRef.current?.();
+          io.observe(mount);
+          document.addEventListener("visibilitychange", onVisibility);
+        });
+
+      teardown = () => {
+        stop();
+        mq?.removeEventListener("change", resize);
+        io.disconnect();
+        ro.disconnect();
+        document.removeEventListener("visibilitychange", onVisibility);
+        window.removeEventListener("pointermove", onPointer);
+        scene.traverse((obj) => {
+          const o = obj as THREE.Mesh;
+          o.geometry?.dispose();
+          const m = o.material as THREE.Material | THREE.Material[] | undefined;
+          if (Array.isArray(m)) m.forEach((x) => x.dispose());
+          else m?.dispose();
+        });
+        envTex.dispose();
+        pmrem.dispose();
+        renderer.dispose();
+        mount.removeChild(renderer.domElement);
+      };
     };
-  }, [hud, wide, tall]);
+
+    setup();
+    return () => {
+      disposed = true;
+      teardown?.();
+    };
+  }, [hud, wide, tall, media]);
 
   return <div ref={mountRef} className="absolute inset-0" aria-hidden />;
 }

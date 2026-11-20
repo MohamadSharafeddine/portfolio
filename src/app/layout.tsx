@@ -26,9 +26,10 @@ export const metadata: Metadata = {
   },
 };
 
-// Sets data-theme before first paint: the visitor's saved choice, else dark (the brand theme)
-const themeScript = `(function(){var t="dark";try{var s=localStorage.getItem("theme");if(s==="light"||s==="dark")t=s}catch(e){}document.documentElement.setAttribute("data-theme",t)})();`;
-
+// Sets data-theme before first paint: the visitor's own choice (saved only when they press the toggle),
+// else the device setting. "theme" was written on every visit by an older version, so it is not a real
+// choice: it's removed and ignored.
+const themeScript = `(function(){var t=null;try{localStorage.removeItem("theme");t=localStorage.getItem("theme-choice")}catch(e){}if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})();`;
 export default function RootLayout({
   children,
 }: Readonly<{
