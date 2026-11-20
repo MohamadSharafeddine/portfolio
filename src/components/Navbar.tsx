@@ -30,26 +30,43 @@ function ThemeToggle() {
   );
 }
 
+const NAV_HEIGHT = 64;
+// Anchor links land a section exactly at the bar's edge. With browser zoom or display scaling that edge
+// falls on fractional pixels (e.g. 64.4), so the threshold allows for rounding.
+const EDGE_TOLERANCE = 4;
+
 /**
- * The section currently being read: the last one whose top has passed 40% down the viewport.
- * At the very bottom of the page it's the last section (Contact is shorter than the screen).
- * Null over the hero, so nothing is highlighted before you enter a section.
+ * One scroll tracker for everything the bar reacts to, so its cues start together.
+ * - `scrolled`: the page has moved at all (the bar gets its solid background)
+ * - `pastHero`: the hero has left the bar. Both the name and the section highlight start here; the hero
+ *   already shows the name in large type, and nothing is "current" until you've entered a section.
+ * - `active`: after that, the last section whose top has passed 40% of the viewport (or the last section
+ *   at the page bottom, since Contact is shorter than the screen).
  */
-function useActiveSection(ids: string[]) {
-  const [active, setActive] = useState<string | null>(null);
+function useScrollState(ids: string[]) {
+  const [state, setState] = useState({ scrolled: false, pastHero: false, active: null as string | null });
   useEffect(() => {
     let raf = 0;
     const update = () => {
       raf = 0;
-      const line = window.innerHeight * 0.4;
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-      let current: string | null = null;
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= line) current = id;
+      const hero = document.getElementById("hero");
+      const pastHero = hero ? hero.getBoundingClientRect().bottom <= NAV_HEIGHT + EDGE_TOLERANCE : true;
+      let active: string | null = null;
+      if (pastHero) {
+        const line = window.innerHeight * 0.4;
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top <= line) active = id;
+        }
+        const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+        if (atBottom || !active) active = atBottom ? ids[ids.length - 1] : ids[0];
       }
-      if (atBottom && current) current = ids[ids.length - 1];
-      setActive(current);
+      const scrolled = window.scrollY > 8;
+      setState((prev) =>
+        prev.scrolled === scrolled && prev.pastHero === pastHero && prev.active === active
+          ? prev
+          : { scrolled, pastHero, active }
+      );
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -63,22 +80,14 @@ function useActiveSection(ids: string[]) {
       cancelAnimationFrame(raf);
     };
   }, [ids]);
-  return active;
+  return state;
 }
 
 const SECTION_IDS = navItems.map((item) => item.href.slice(1));
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const active = useActiveSection(SECTION_IDS);
-
-  useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const { scrolled: isScrolled, pastHero, active } = useScrollState(SECTION_IDS);
 
   // A single indicator line that slides under the active link
   const linksRef = useRef<HTMLDivElement>(null);
@@ -113,9 +122,21 @@ export default function Navbar() {
       }`}
     >
       <nav className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-6 lg:px-8">
-        <a href="#hero" className="flex items-center gap-3 rounded-md" onClick={() => setIsMenuOpen(false)}>
+        <a
+          href="#hero"
+          aria-label="Mohamad Sharafeddine, back to top"
+          className="flex items-center gap-3 rounded-md"
+          onClick={() => setIsMenuOpen(false)}
+        >
           <Logo size={28} />
-          <span className="text-[15px] font-medium tracking-tight text-fg">Mohamad Sharafeddine</span>
+          <span
+            aria-hidden
+            className={`text-[15px] font-medium tracking-tight text-fg transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              pastHero ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
+            }`}
+          >
+            Mohamad Sharafeddine
+          </span>
         </a>
 
         <div ref={linksRef} className="relative hidden items-center gap-1 lg:flex">
