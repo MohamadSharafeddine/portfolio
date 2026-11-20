@@ -1,26 +1,24 @@
 import Image from "next/image";
 
 interface LogoProps {
-  isFixed?: boolean;
-  onClick?: (e: React.MouseEvent) => void;
+  size?: number;
   className?: string;
 }
 
-export default function Logo({ isFixed, onClick, className = "" }: LogoProps) {
+// Both marks are rendered; CSS picks the one that matches data-theme,
+// so the logo is correct on first paint.
+export default function Logo({ size = 32, className = "" }: LogoProps) {
   return (
-    <div
-      className={`flex items-center ${
-        onClick ? "cursor-pointer" : ""
-      } ${className}`}
-      onClick={onClick}
-    >
+    <span className={`relative inline-block shrink-0 ${className}`} style={{ width: size, height: size }}>
+      <Image src="/logo.png" alt="Mohamad Sharafeddine" width={size} height={size} priority className="dark:hidden" />
       <Image
-        src={isFixed ? "/logo-inverted.png" : "/logo.png"}
-        alt="logo"
-        width={44}
-        height={44}
+        src="/logo-inverted.png"
+        alt="Mohamad Sharafeddine"
+        width={size}
+        height={size}
         priority
+        className="hidden dark:block"
       />
-    </div>
+    </span>
   );
 }

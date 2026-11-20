@@ -1,45 +1,121 @@
 @import "tailwindcss";
 
+/* Theme is driven by data-theme on <html> (set before paint in layout.tsx) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Black chrome and brushed silver. Light theme is brushed aluminum. */
 :root {
-  --background: #d7d7d7;
-  --foreground: #000000;
-  --text-primary: #000000;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
-  --border-color: #e5e7eb;
-  --card-background: #ffffff;
-  --navbar-background: rgba(0, 0, 0, 0.8);
-  --navbar-text: #ffffff;
-  --footer-background: #000000;
-  --footer-text: #f3f4f6;
-  --gradient-start: #1f2937;
-  --gradient-middle: #9ca3af;
-  --gradient-end: #e5e7eb;
+  --bg: #efeff1;
+  --surface: #f8f8f9;
+  --raised: #e4e4e8;
+  --line: rgba(12, 12, 14, 0.1);
+  --line-strong: rgba(12, 12, 14, 0.2);
+  --fg: #0c0c0e;
+  --fg-2: #46464d;
+  --fg-3: #67676f;
+  --accent: #2a2b30;
+  --accent-ink: #2a2b30;
+  --on-accent: #ffffff;
+  /* Metal fills for primary actions */
+  --metal: linear-gradient(180deg, #3b3c42 0%, #1b1c20 55%, #0e0e11 100%);
+  --metal-hover: linear-gradient(180deg, #4a4b52 0%, #232429 55%, #141418 100%);
+  --metal-edge: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 2px rgba(0, 0, 0, 0.25);
+  /* The "machine" surfaces stay black in both themes */
+  --plate: #070708;
+  --plate-light: #1c1d21;
 }
 
 [data-theme="dark"] {
-  --background: #000000;
-  --foreground: #ffffff;
-  --text-primary: #ffffff;
-  --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
-  --border-color: #374151;
-  --card-background: #111111;
-  --navbar-background: rgba(0, 0, 0, 0.9);
-  --navbar-text: #ffffff;
-  --footer-background: #000000;
-  --footer-text: #f3f4f6;
-  --gradient-start: #f3f4f6;
-  --gradient-middle: #9ca3af;
-  --gradient-end: #1f2937;
+  --bg: #09090a;
+  --surface: #111113;
+  --raised: #1a1a1d;
+  --line: rgba(236, 236, 240, 0.08);
+  --line-strong: rgba(236, 236, 240, 0.16);
+  --fg: #ececf0;
+  --fg-2: #a4a4ac;
+  --fg-3: #7d7d86;
+  --accent: #d5d7dd;
+  --accent-ink: #d5d7dd;
+  --on-accent: #0a0a0b;
+  --metal: linear-gradient(180deg, #ffffff 0%, #d9dade 45%, #a9abb2 100%);
+  --metal-hover: linear-gradient(180deg, #ffffff 0%, #e6e7ea 45%, #babcc3 100%);
+  --metal-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 8px 24px -8px rgba(255, 255, 255, 0.18);
+  --plate: #050506;
+  --plate-light: #18191c;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-plate: var(--plate);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  background: var(--bg);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-raleway), system-ui, sans-serif;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #d5d7dd;
+  color: #0a0a0b;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Brushed-metal primary button */
+.btn-metal {
+  background: var(--metal);
+  color: var(--on-accent);
+  box-shadow: var(--metal-edge);
+}
+.btn-metal:hover {
+  background: var(--metal-hover);
+}
+
+/* Polished silver lettering, used only on the hero name */
+.chrome-text {
+  background: linear-gradient(180deg, #ffffff 0%, #e4e5e9 38%, #8d8f97 62%, #d9dade 82%, #f4f4f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hero items start hidden only when motion is allowed; GSAP reveals them.
+   The <noscript> style in layout.tsx undoes this without JS. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-hero-item] {
+    visibility: hidden;
+  }
 }
