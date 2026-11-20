@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Logo from "./Logo";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SunIcon, MoonIcon, Bars2Icon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -30,9 +30,48 @@ function ThemeToggle() {
   );
 }
 
+/**
+ * The section currently being read: the last one whose top has passed 40% down the viewport.
+ * At the very bottom of the page it's the last section (Contact is shorter than the screen).
+ * Null over the hero, so nothing is highlighted before you enter a section.
+ */
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState<string | null>(null);
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const line = window.innerHeight * 0.4;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      let current: string | null = null;
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) current = id;
+      }
+      if (atBottom && current) current = ids[ids.length - 1];
+      setActive(current);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [ids]);
+  return active;
+}
+
+const SECTION_IDS = navItems.map((item) => item.href.slice(1));
+
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const active = useActiveSection(SECTION_IDS);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 8);
@@ -40,6 +79,21 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // A single indicator line that slides under the active link
+  const linksRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ x: number; w: number } | null>(null);
+  const measure = useCallback(() => {
+    const link = active ? linksRef.current?.querySelector<HTMLElement>(`a[href="#${active}"]`) : null;
+    setIndicator(link ? { x: link.offsetLeft + 12, w: link.offsetWidth - 24 } : null);
+  }, [active]);
+  useLayoutEffect(measure, [measure]);
+  useEffect(() => {
+    // Link widths change once the web font loads, and on resize
+    document.fonts?.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -64,16 +118,31 @@ export default function Navbar() {
           <span className="text-[15px] font-medium tracking-tight text-fg">Mohamad Sharafeddine</span>
         </a>
 
-        <div className="hidden items-center gap-1 lg:flex">
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="rounded-lg px-3 py-2 text-sm text-fg-2 transition-colors duration-150 hover:text-fg"
-            >
-              {item.text}
-            </a>
-          ))}
+        <div ref={linksRef} className="relative hidden items-center gap-1 lg:flex">
+          {navItems.map((item) => {
+            const isActive = active === item.href.slice(1);
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? "location" : undefined}
+                className={`rounded-lg px-3 py-2 text-sm transition-colors duration-200 hover:text-fg ${
+                  isActive ? "text-fg" : "text-fg-2"
+                }`}
+              >
+                {item.text}
+              </a>
+            );
+          })}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-0.5 left-0 h-px origin-left bg-fg transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{
+              width: 1,
+              opacity: indicator ? 0.9 : 0,
+              transform: indicator ? `translateX(${indicator.x}px) scaleX(${indicator.w})` : "translateX(0) scaleX(0)",
+            }}
+          />
           <div className="ml-2 h-5 w-px bg-line" aria-hidden />
           <div className="ml-2">
             <ThemeToggle />
@@ -103,18 +172,25 @@ export default function Navbar() {
         aria-hidden={!isMenuOpen}
       >
         <ul className="pt-4">
-          {navItems.map((item) => (
-            <li key={item.href} className="border-b border-line">
-              <a
-                href={item.href}
-                tabIndex={isMenuOpen ? 0 : -1}
-                onClick={() => setIsMenuOpen(false)}
-                className="flex h-14 items-center text-2xl font-medium tracking-tight text-fg"
-              >
-                {item.text}
-              </a>
-            </li>
-          ))}
+          {navItems.map((item) => {
+            const isActive = active === item.href.slice(1);
+            return (
+              <li key={item.href} className="border-b border-line">
+                <a
+                  href={item.href}
+                  tabIndex={isMenuOpen ? 0 : -1}
+                  aria-current={isActive ? "location" : undefined}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`flex h-14 items-center justify-between text-2xl font-medium tracking-tight ${
+                    isActive || !active ? "text-fg" : "text-fg-2"
+                  }`}
+                >
+                  {item.text}
+                  {isActive && <span className="h-1.5 w-1.5 rounded-full bg-fg" aria-hidden />}
+                </a>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </header>
