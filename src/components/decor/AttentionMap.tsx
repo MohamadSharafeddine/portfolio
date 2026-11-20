@@ -23,7 +23,8 @@ const H = 460;
 const X0 = 150;
 const X1 = 270;
 const STEP_SECONDS = 2.2;
-const RESUME_SECONDS = 1.6;
+const RESUME_SECONDS = 1.6; // after the mouse leaves a word
+const TAP_RESUME_SECONDS = 3; // after a tap, click or keyboard focus (there is no "leave" to wait for)
 const rowY = (i: number) => 70 + i * 80;
 const curve = (i: number, j: number) =>
   `M${X0},${rowY(i)} C${(X0 + X1) / 2},${rowY(i)} ${(X0 + X1) / 2},${rowY(j)} ${X1},${rowY(j)}`;
@@ -37,7 +38,7 @@ type Focus = { side: "q" | "k"; index: number };
  */
 export default function AttentionMap() {
   const root = useRef<HTMLDivElement>(null);
-  const api = useRef<{ focus: (f: Focus) => void; release: (delay?: number) => void } | null>(null);
+  const api = useRef<{ hoverStart: (f: Focus) => void; hoverEnd: () => void; select: (f: Focus) => void } | null>(null);
 
   useGSAP(
     (_, contextSafe) => {
@@ -56,7 +57,19 @@ export default function AttentionMap() {
         gsap.to(q$(`[data-${side}weight]`), { opacity: 1, duration: dur });
       };
 
-      const focus = ({ side, index }: Focus) => {
+      // Header readout: makes it obvious whether the figure is playing itself or being explored
+      const statusMode = el.querySelector<HTMLElement>("[data-status-mode]");
+      const statusWord = el.querySelector<HTMLElement>("[data-status-word]");
+      const setStatus = (mode: "auto" | "user", word: string) => {
+        if (statusMode) {
+          statusMode.textContent = mode === "auto" ? "▸ auto" : "● exploring";
+          statusMode.style.color = mode === "auto" ? "" : "#ececf0";
+        }
+        if (statusWord) statusWord.textContent = word;
+      };
+
+      const focus = ({ side, index }: Focus, mode: "auto" | "user" = "auto") => {
+        setStatus(mode, side === "q" ? QUERIES[index] : KEYS[index]);
         gsap.to(q$("[data-edge]"), { opacity: 0.06, strokeWidth: 1, duration: dur, overwrite: "auto" });
         gsap.to(q$("[data-qpill], [data-kpill]"), { opacity: 0, duration: dur, overwrite: "auto" });
         gsap.to(q$(`[data-${side}pill="${index}"]`), { opacity: 1, duration: dur, overwrite: "auto" });
@@ -127,16 +140,32 @@ export default function AttentionMap() {
         },
       });
 
+      // Interaction always ends in autoplay resuming: hovering holds the selection until the mouse
+      // leaves; taps, clicks and keyboard focus hold it for a few seconds, restarted by each new one.
+      let hovering = false;
+      const take = (f: Focus) => {
+        userControl = true;
+        timer?.kill();
+        focus(f, "user");
+        if (f.side === "q") next = (f.index + 1) % QUERIES.length;
+      };
+      const resumeAfter = (delay: number) => {
+        userControl = false;
+        schedule(delay);
+      };
+
       api.current = {
-        focus: contextSafe!((f: Focus) => {
-          userControl = true;
-          timer?.kill();
-          focus(f);
-          if (f.side === "q") next = (f.index + 1) % QUERIES.length;
+        hoverStart: contextSafe!((f: Focus) => {
+          hovering = true;
+          take(f);
         }),
-        release: contextSafe!((delay: number = RESUME_SECONDS) => {
-          userControl = false;
-          schedule(delay);
+        hoverEnd: contextSafe!(() => {
+          hovering = false;
+          resumeAfter(RESUME_SECONDS);
+        }),
+        select: contextSafe!((f: Focus) => {
+          take(f);
+          if (!hovering) resumeAfter(TAP_RESUME_SECONDS);
         }),
       };
 
@@ -150,12 +179,11 @@ export default function AttentionMap() {
     tabIndex: 0,
     "aria-label": side === "q" ? `Show what “${label}” attends to` : `Show what attends to “${label}”`,
     className: "cursor-pointer outline-none [&:focus-visible_rect]:stroke-white",
-    onPointerEnter: () => api.current?.focus({ side, index }),
-    // A tap has no hover to end, so it holds the selection a little longer before autoplay resumes
-    onPointerLeave: (e: React.PointerEvent) => api.current?.release(e.pointerType === "mouse" ? undefined : 5),
-    onFocus: () => api.current?.focus({ side, index }),
-    onBlur: () => api.current?.release(),
-    onClick: () => api.current?.focus({ side, index }),
+    // Hover is mouse-only; on touch the tap arrives as focus + click, handled by `select`
+    onPointerEnter: (e: React.PointerEvent) => e.pointerType === "mouse" && api.current?.hoverStart({ side, index }),
+    onPointerLeave: (e: React.PointerEvent) => e.pointerType === "mouse" && api.current?.hoverEnd(),
+    onFocus: () => api.current?.select({ side, index }),
+    onClick: () => api.current?.select({ side, index }),
   });
 
   return (
@@ -165,9 +193,13 @@ export default function AttentionMap() {
         className="relative overflow-hidden rounded-[24px] border border-line bg-plate"
         style={{ backgroundImage: "radial-gradient(80% 60% at 50% 40%, #16171a 0%, #050506 75%)" }}
       >
-        <div className="flex items-center justify-between px-6 pt-5 font-mono text-[11px] text-fg-3">
+        <div className="flex items-center justify-between gap-4 px-6 pt-5 font-mono text-[11px] text-fg-3">
           <span>layer 12 · head 3</span>
-          <span>attention</span>
+          <span aria-hidden className="flex items-center gap-1.5 whitespace-nowrap">
+            <span data-status-mode>▸ auto</span>
+            <span>·</span>
+            <span data-status-word className="text-fg-2">people</span>
+          </span>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="block w-full select-none">
           <defs>

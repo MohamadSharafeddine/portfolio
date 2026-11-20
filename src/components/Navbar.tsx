@@ -23,8 +23,9 @@ function ThemeToggle() {
       className="flex h-9 w-9 items-center justify-center rounded-lg text-fg-2 transition-colors duration-150 hover:bg-raised hover:text-fg cursor-pointer"
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      <MoonIcon className="h-[18px] w-[18px] dark:hidden" />
-      <SunIcon className="hidden h-[18px] w-[18px] dark:block" />
+      {/* site-dark, not dark: over the hero the bar is scoped dark, but the icon must show the site's theme */}
+      <MoonIcon className="h-[18px] w-[18px] site-dark:hidden" />
+      <SunIcon className="hidden h-[18px] w-[18px] site-dark:block" />
     </button>
   );
 }

@@ -11,7 +11,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-/** Only written when the visitor presses the toggle; otherwise the device setting decides. */
+/** Written only when the visitor toggles away from their device setting; otherwise the device decides. */
 const CHOICE_KEY = "theme-choice";
 
 const apply = (t: Theme) => document.documentElement.setAttribute("data-theme", t);
@@ -49,8 +49,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
       apply(next);
+      // Choosing the device's own mode means "follow my device" again, so nothing gets stuck
+      const device: Theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       try {
-        localStorage.setItem(CHOICE_KEY, next);
+        if (next === device) localStorage.removeItem(CHOICE_KEY);
+        else localStorage.setItem(CHOICE_KEY, next);
       } catch {}
       return next;
     });

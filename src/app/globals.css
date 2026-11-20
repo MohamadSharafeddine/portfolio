@@ -2,6 +2,8 @@
 
 /* Theme is driven by data-theme on <html> (set before paint in layout.tsx) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* The site-wide theme only (the <html> attribute), ignoring scoped data-theme="dark" sections like the hero */
+@custom-variant site-dark (&:where(html[data-theme="dark"] *));
 
 /* Black chrome and brushed silver. Light theme is brushed aluminum. */
 :root {
